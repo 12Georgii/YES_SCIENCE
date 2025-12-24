@@ -1,0 +1,6 @@
+% Model:              Норматсеник_вдох_смещение_сердца.mph
+% Version:            COMSOL 6.2.0.339
+% Date:               Dec 6 2025, 19:42
+% Table:              Probe Table 8 - 
+% ElR1 (V), ElectrodeR1                           ElR2 (V), ElectrodeR2
+2.7327255773903367                                2.6334511424208396
