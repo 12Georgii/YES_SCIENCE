@@ -1,0 +1,1 @@
+((-(((x-xh)/Rb)*ec.Jx+((y-yh)/Rb)*ec.Jy+((z-zh)/Rb)*ec.Jz)*V2)/(I^2)) Ω "Heart chambers1"

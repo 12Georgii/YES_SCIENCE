@@ -1,0 +1,1 @@
+((-(cpl1nx*ec.Jx+cpl1ny*ec.Jy+cpl1nz*ec.Jz)*V2)/(I^2)) Ω APERTURE2
