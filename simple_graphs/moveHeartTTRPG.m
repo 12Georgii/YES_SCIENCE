@@ -5,11 +5,11 @@ close all;
 
 %% 1. Загрузка данных COMSOL
 
-filename = 'move_heart.txt';
+filename = 'moveHeart_to10_step1_NIX.txt';
 
 if ~isfile(filename)
     [file, path] = uigetfile('*.txt', ...
-        'Выберите файл move_heart.txt');
+        'Выберите файл moveHeart_to10_step1_NIX.txt');
 
     if isequal(file, 0)
         error('Файл не выбран');
@@ -43,24 +43,21 @@ end
 % Смещение сердца, мм
 d = M(:,1);
 
-% Значения импеданса при вдохе
-% Порядок столбцов в исходном файле:
-% X_inh, X_exh, Y_inh, Z_inh,
-% R_inh, R_exh, Y_exh, Z_exh
+% Импеданс при вдохе
+% delX_inh, delY_inh, delZ_inh, delR_inh
+Z_inh = M(:, 2:5);
 
-Z_inh = M(:, [2 4 5 6]);
-
-% Значения импеданса при выдохе
-Z_exh = M(:, [3 8 9 7]);
+% Импеданс при выдохе
+% delX_exh, delY_exh, delZ_exh, delR_exh
+Z_exh = M(:, 6:9);
 
 % Названия кривых
 names = {'delX', 'delY', 'delZ', 'delR'};
 
-
 %% 3. Расчет изменения импеданса
 
-dZ_inh = Z_inh - Z_inh(1,:);
-dZ_exh = Z_exh - Z_exh(1,:);
+dZ_inh = abs(Z_inh - Z_inh(1,:));
+dZ_exh = abs(Z_exh - Z_exh(1,:));
 
 %% 4. Построение четырех графиков
 
