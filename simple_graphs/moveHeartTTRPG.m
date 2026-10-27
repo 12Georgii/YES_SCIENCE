@@ -3,13 +3,13 @@ clear;
 clc;
 close all;
 
-%% 1. Загрузка данных COMSOL
+%% 1. Загрузка файла COMSOL
 
-filename = 'moveHeart_to10_step1_NIX.txt';
+filename = 'CompEXTRfineandFINE.txt';
 
 if ~isfile(filename)
     [file, path] = uigetfile('*.txt', ...
-        'Выберите файл moveHeart_to10_step1_NIX.txt');
+        'Выберите файл COMSOL');
 
     if isequal(file, 0)
         error('Файл не выбран');
@@ -18,114 +18,157 @@ if ~isfile(filename)
     filename = fullfile(path, file);
 end
 
-% COMSOL использует символ % для комментариев
 fid = fopen(filename, 'r');
 
 if fid == -1
     error('Не удалось открыть файл');
 end
 
-data = textscan(fid, repmat('%f', 1, 9), ...
+% В файле три числовых столбца
+data = textscan(fid, '%f %f %f', ...
     'CommentStyle', '%', ...
-    'MultipleDelimsAsOne', true);
+    'MultipleDelimsAsOne', true, ...
+    'CollectOutput', true);
 
 fclose(fid);
 
-% Преобразование в числовую матрицу
-M = [data{:}];
+M = data{1};
 
-if isempty(M) || size(M, 2) ~= 9
+if isempty(M) || size(M, 2) ~= 3
     error('Ошибка чтения данных COMSOL');
 end
 
 %% 2. Извлечение столбцов
 
-% Смещение сердца, мм
+% Смещение, мм
 d = M(:,1);
 
-% Импеданс при вдохе
-% delX_inh, delY_inh, delZ_inh, delR_inh
-Z_inh = M(:, 2:5);
+% Импеданс для сетки Extra fine
+Z_extra = M(:,2);
 
-% Импеданс при выдохе
-% delX_exh, delY_exh, delZ_exh, delR_exh
-Z_exh = M(:, 6:9);
+% Импеданс для сетки Finer
+Z_finer = M(:,3);
 
-% Названия кривых
-names = {'delX', 'delY', 'delZ', 'delR'};
+%% 3. Расчет изменений импеданса
 
-%% 3. Расчет изменения импеданса
+% Изменение относительно начального значения
+dZ_extra = Z_extra - Z_extra(1);
+dZ_finer = Z_finer - Z_finer(1);
 
-dZ_inh = abs(Z_inh - Z_inh(1,:));
-dZ_exh = abs(Z_exh - Z_exh(1,:));
+% Абсолютное расхождение между сетками
+diff_Z = abs(Z_extra - Z_finer);
 
-%% 4. Построение четырех графиков
+% Относительное расхождение, %
+% За базу принимаем сетку Finer
+relative_diff = diff_Z ./ abs(Z_finer) * 100;
 
-datasets = {Z_inh, Z_exh, dZ_inh, dZ_exh};
+%% 4. График 1: Импеданс двух сеток
 
-titles = {
-    'Импеданс при вдохе'
-    'Импеданс при выдохе'
-    'Изменение импеданса при вдохе'
-    'Изменение импеданса при выдохе'
-};
+fig1 = figure( ...
+    'Name', 'Сравнение импеданса', ...
+    'NumberTitle', 'off', ...
+    'Color', 'w');
 
-names = {'delX', 'delY', 'delZ', 'delR'};
+ax1 = axes('Parent', fig1);
 
-for i = 1:4
+hold(ax1, 'on');
 
-    % Создаем отдельное окно
-    fig = figure( ...
-        'Name', titles{i}, ...
-        'NumberTitle', 'off', ...
-        'Color', 'w', ...
-        'Visible', 'on', ...
-        'WindowStyle', 'normal');
+plot(ax1, d, Z_extra, '-or', ...
+    'LineWidth', 2, ...
+    'MarkerSize', 6, ...
+    'DisplayName', 'Extra fine');
 
-    % Явно создаем оси
-    ax = axes('Parent', fig);
+plot(ax1, d, Z_finer, '-sb', ...
+    'LineWidth', 2, ...
+    'MarkerSize', 6, ...
+    'DisplayName', 'Finer');
 
-    hold(ax, 'on');
+hold(ax1, 'off');
 
-    % Строим четыре кривые
-    for j = 1:4
-        plot(ax, d, datasets{i}(:,j), '-o', ...
-            'LineWidth', 2, ...
-            'MarkerSize', 6, ...
-            'DisplayName', names{j});
-    end
+grid(ax1, 'on');
+box(ax1, 'on');
 
-    % Нулевая линия для разностей
-    if i >= 3
-        yline(ax, 0, '--k', ...
-            'HandleVisibility', 'off');
-    end
+xlabel(ax1, 'Смещение, мм');
+ylabel(ax1, 'Импеданс Z, Ом');
+title(ax1, 'Зависимость импеданса от смещения');
 
-    hold(ax, 'off');
+legend(ax1, 'show', 'Location', 'best');
 
-    grid(ax, 'on');
-    box(ax, 'on');
+%% 5. График 2: Изменение импеданса
 
-    xlabel(ax, 'Смещение, мм');
+fig2 = figure( ...
+    'Name', 'Изменение импеданса', ...
+    'NumberTitle', 'off', ...
+    'Color', 'w');
 
-    if i <= 2
-        ylabel(ax, 'Импеданс Z, Ом');
-    else
-        ylabel(ax, '\Delta Z, Ом');
-    end
+ax2 = axes('Parent', fig2);
 
-    title(ax, titles{i});
-    legend(ax, 'show', 'Location', 'best');
+hold(ax2, 'on');
 
-    xlim(ax, [min(d), max(d)]);
+plot(ax2, d, dZ_extra, '-or', ...
+    'LineWidth', 2, ...
+    'MarkerSize', 6, ...
+    'DisplayName', 'Extra fine');
 
-    % Автоматический масштаб
-    axis(ax, 'auto');
+plot(ax2, d, dZ_finer, '-sb', ...
+    'LineWidth', 2, ...
+    'MarkerSize', 6, ...
+    'DisplayName', 'Finer');
 
-    % Принудительное отображение
-    set(fig, 'Visible', 'on');
-    drawnow;
+yline(ax2, 0, '--k', ...
+    'HandleVisibility', 'off');
 
-    fprintf('Построен график %d\n', i);
+hold(ax2, 'off');
 
-end
+grid(ax2, 'on');
+box(ax2, 'on');
+
+xlabel(ax2, 'Смещение, мм');
+ylabel(ax2, '\Delta Z, Ом');
+title(ax2, 'Изменение импеданса относительно d = 0');
+
+legend(ax2, 'show', 'Location', 'best');
+
+%% 6. График 3: Расхождение между сетками
+
+fig3 = figure( ...
+    'Name', 'Относительное расхождение', ...
+    'NumberTitle', 'off', ...
+    'Color', 'w');
+
+ax3 = axes('Parent', fig3);
+
+plot(ax3, d, relative_diff, '-ok', ...
+    'LineWidth', 2, ...
+    'MarkerSize', 6);
+
+grid(ax3, 'on');
+box(ax3, 'on');
+
+xlabel(ax3, 'Смещение, мм');
+ylabel(ax3, 'Расхождение, %');
+
+title(ax3, ...
+    'Относительное расхождение Extra fine и Finer');
+
+%% 7. Численные результаты
+
+fprintf('\nСРАВНЕНИЕ СЕТОК\n');
+
+fprintf('Максимальное расхождение: %.6f %%\n', ...
+    max(relative_diff));
+
+fprintf('Среднее расхождение: %.6f %%\n', ...
+    mean(relative_diff));
+
+fprintf('Минимальное расхождение: %.6f %%\n', ...
+    min(relative_diff));
+
+fprintf('\nНачальные значения:\n');
+
+fprintf('Extra fine: %.8f Ом\n', Z_extra(1));
+fprintf('Finer: %.8f Ом\n', Z_finer(1));
+
+fprintf('\nВсе графики построены.\n');
+
+drawnow;
